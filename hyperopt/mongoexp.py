@@ -215,6 +215,12 @@ def parse_url(url, pwfile=None):
         authdbname = query_params['authSource'][-1]
         
     logger.info('AUTH DB %s' % authdbname)
+
+    replicaset = None
+    if 'replicaSet' in query_params and len(query_params['replicaSet']):
+        replicaset = query_params['replicaSet'][-1]
+
+    logger.info('REPLICA SET %s' % replicaset)
     
     try:
         _, dbname, collection = tmp.path.split('/')
@@ -235,12 +241,12 @@ def parse_url(url, pwfile=None):
         logger.info('PASS ***')
     port = int(float(tmp.port))  # port has to be casted explicitly here.
 
-    return (protocol, tmp.username, password, hostname, port, dbname, collection, authdbname)
+    return (protocol, tmp.username, password, hostname, port, dbname, collection, authdbname, replicaset)
 
 
 def connection_with_tunnel(dbname, host='localhost',
                            auth_dbname=None, port=27017,
-                           ssh=False, user='hyperopt', pw=None):
+                           ssh=False, user='hyperopt', pw=None, replica_set=None):
     if ssh:
         local_port = numpy.random.randint(low=27500, high=28000)
         # -- forward from local to remote machine
@@ -252,9 +258,9 @@ def connection_with_tunnel(dbname, host='localhost',
         # -- give the subprocess time to set up
         time.sleep(.5)
         connection = pymongo.MongoClient('127.0.0.1', local_port,
-                                         document_class=SON, w=1, j=True)
+                                         document_class=SON, w=1, j=True, replicaSet=replica_set)
     else:
-        connection = pymongo.MongoClient(host, port, document_class=SON, w=1, j=True)
+        connection = pymongo.MongoClient(host, port, document_class=SON, w=1, j=True, replicaSet=replica_set)
         if user:
             if not pw:
                 pw = read_pw()
@@ -274,7 +280,7 @@ def connection_with_tunnel(dbname, host='localhost',
 
 
 def connection_from_string(s):
-    protocol, user, pw, host, port, db, collection, authdb = parse_url(s)
+    protocol, user, pw, host, port, db, collection, authdb, replica_set = parse_url(s)
     if protocol == 'mongo':
         ssh = False
     elif protocol in ('mongo+ssh', 'ssh+mongo'):
@@ -288,7 +294,8 @@ def connection_from_string(s):
         pw=pw,
         host=host,
         port=port,
-        auth_dbname=authdb
+        auth_dbname=authdb,
+        replica_set=replica_set
     )
     return connection, tunnel, connection[db], connection[db][collection]
 
