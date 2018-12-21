@@ -200,9 +200,13 @@ def parse_url(url, pwfile=None):
     tmp = urllib.parse.urlparse(ftp_url)
     query_params = urllib.parse.parse_qs(tmp.query)
 
+    hostname = tmp.hostname
+    if ',' in hostname:
+        hostname = hostname.split(',')
+
     logger.info('PROTOCOL %s' % protocol)
     logger.info('USERNAME %s' % tmp.username)
-    logger.info('HOSTNAME %s' % tmp.hostname)
+    logger.info('HOSTNAME %s' % hostname)
     logger.info('PORT %s' % tmp.port)
     logger.info('PATH %s' % tmp.path)
     
@@ -231,7 +235,7 @@ def parse_url(url, pwfile=None):
         logger.info('PASS ***')
     port = int(float(tmp.port))  # port has to be casted explicitly here.
 
-    return (protocol, tmp.username, password, tmp.hostname, port, dbname, collection, authdbname)
+    return (protocol, tmp.username, password, hostname, port, dbname, collection, authdbname)
 
 
 def connection_with_tunnel(dbname, host='localhost',
